@@ -38,4 +38,25 @@ export class SceneStack<State, Event> {
 
         return;
     }
+
+    update(): void {
+        const scenesToUpdate = [];
+        // Create shallow copy and reverse
+        const scenes = this.scenes.slice().reverse();
+
+        if (this.scenes.length < 1) {
+            return;
+        }
+
+        let updateNext;
+        let sceneIndex = 0;
+        do {
+            scenesToUpdate.push(scenes[sceneIndex]);
+            updateNext = scenes[sceneIndex].update_down();
+            sceneIndex++;
+        } while (updateNext);
+
+        scenesToUpdate.forEach(scene => this.runCommand(scene.update(this.world)));
+        return;
+    }
 }
