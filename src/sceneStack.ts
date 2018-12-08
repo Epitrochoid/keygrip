@@ -1,5 +1,25 @@
 import { Scene, SceneSwitch } from './scene';
 
+function collectScenes<State, Event>(sceneList: Array<Scene<State, Event>>,
+    testFunc: (s: Scene<State, Event>) => boolean): Array<Scene<State, Event>> | void {
+
+    const scenesToUpdate = [];
+    // Create shallow copy and reverse
+    const scenes = sceneList.slice().reverse();
+
+    if (sceneList.length < 1) {
+        return;
+    }
+
+    let continueCollecting;
+    let sceneIndex = 0;
+    do {
+        scenesToUpdate.push(scenes[sceneIndex]);
+        continueCollecting = testFunc(scenes[sceneIndex]);
+        sceneIndex++;
+    } while (continueCollecting);
+}
+
 export class SceneStack<State, Event> {
     world: State;
     scenes: Array<Scene<State, Event>>;
@@ -40,23 +60,38 @@ export class SceneStack<State, Event> {
     }
 
     update(): void {
-        const scenesToUpdate = [];
-        // Create shallow copy and reverse
-        const scenes = this.scenes.slice().reverse();
+        const scenesToUpdate = collectScenes(this.scenes, s => s.update_down());
 
-        if (this.scenes.length < 1) {
-            return;
+        if (scenesToUpdate) {
+            scenesToUpdate.forEach(scene => this.runCommand(scene.update(this.world)));
         }
-
-        let updateNext;
-        let sceneIndex = 0;
-        do {
-            scenesToUpdate.push(scenes[sceneIndex]);
-            updateNext = scenes[sceneIndex].update_down();
-            sceneIndex++;
-        } while (updateNext);
-
-        scenesToUpdate.forEach(scene => this.runCommand(scene.update(this.world)));
         return;
+    }
+
+    input(event: Event): void {
+        const scenesToUpdate = collectScenes(this.scenes, s => s.input_down());
+
+        if (scenesToUpdate) {
+            scenesToUpdate.reduce((prevEvent, currScene) => {
+                return currScene.input(this.world, prevEvent); 
+            }, event);
+        }
+        return;
+    }
+
+    draw(): void {
+        const scenesToDraw = collectScenes(this.scenes, s => s.draw_down());
+
+        if (scenesToDraw) {
+            scenesToDraw.forEach(scene => scene.draw(this.world));
+        }
+        return;
+    }
+
+    swapRoot(scene: Scene<State, Event>): void {
+        while (this.scenes.length > 0) {
+            this.pop();
+        }
+        this.push(scene);
     }
 }

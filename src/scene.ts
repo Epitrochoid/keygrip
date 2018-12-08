@@ -24,7 +24,7 @@ export interface Scene<State, Event> {
 
     update(state: State): SceneSwitch<State, Event>;
     draw(state: State): void;
-    input(state: State, event: Event): void;
+    input(state: State, event: Event): Event;
 
     update_down(): boolean;
     draw_down(): boolean;
